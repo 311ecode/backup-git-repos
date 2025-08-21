@@ -8,9 +8,12 @@ backupGitRepo() {
   local repoRoot
   repoRoot=$(getTheRootOfTheGitRepository)
 
-  local repoName=$(basename "$repoRoot")
-  local backupDate=$(date +%Y-%m-%d)
-  local backupTime=$(date +%H-%M-%S)
+  local repoName
+  repoName=$(basename "$repoRoot")
+  local backupDate
+  backupDate=$(date +%Y-%m-%d)
+  local backupTime
+  backupTime=$(date +%H-%M-%S)
 
   cd "$repoRoot/.." || return 1
 
@@ -19,18 +22,18 @@ backupGitRepo() {
 
   echo "📦 Creating backup: $backupName"
 
-  # Get ignored files (absolute paths)
+  # Collect ignored files from git
   local ignoredList
-  ignoredList=$(git_list_ignored_files "$repoRoot")
+  ignoredList=$(git -C "$repoRoot" status --porcelain --ignored \
+    2>/dev/null | grep '^!!' | cut -c4-)
 
   local excludeArgs=()
-  while IFS= read -r absPath; do
-    [[ -z "$absPath" ]] && continue
-    # Convert absolute → relative to repoRoot
-    local relPath="${absPath#$repoRoot/}"
+  while IFS= read -r relPath; do
+    [[ -z "$relPath" ]] && continue
     excludeArgs+=(--exclude="$relPath")
   done <<< "$ignoredList"
 
+  # Copy repo → backup, skipping ignored files
   rsync -a --quiet "${excludeArgs[@]}" \
     "$repoName/" "$backupName/"
 
