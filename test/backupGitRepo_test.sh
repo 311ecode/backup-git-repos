@@ -4,14 +4,13 @@
 
 # @file backupGitRepo_test.sh
 # @brief Test suite for backupGitRepo
-# @description Tests core backup behavior, node_modules cleanup,
-#              and maxBackups enforcement.
+# @description Tests backup creation and maxBackups enforcement.
 
 testBackupGitRepo() {
   export LC_NUMERIC=C
 
   testBackupGitRepoCreatesBackupDirectory() {
-    echo "🧪 Should create a backup directory"
+    echo "🧪 testBackupGitRepoCreatesBackupDirectory"
     local tempDir
     tempDir=$(mktemp -d)
     cd "$tempDir"
@@ -20,8 +19,6 @@ testBackupGitRepo() {
     cd testrepo
     echo "content" > file.txt
     git add file.txt && git commit -q -m "init"
-
-    mkdir node_modules && touch node_modules/fake.js
 
     # Stub getTheRootOfTheGitRepository
     getTheRootOfTheGitRepository() {
@@ -43,37 +40,8 @@ testBackupGitRepo() {
     fi
   }
 
-  testBackupGitRepoRemovesNodeModules() {
-    echo "🧪 Should remove node_modules in backup"
-    local tempDir
-    tempDir=$(mktemp -d)
-    cd "$tempDir"
-
-    git init -q testrepo
-    cd testrepo
-    mkdir -p node_modules && touch node_modules/fake.js
-    git add . && git commit -q -m "init"
-
-    getTheRootOfTheGitRepository() {
-      git rev-parse --show-toplevel
-    }
-
-    backupGitRepo 1 >/dev/null
-    cd ..
-    local backupDir
-    backupDir=$(ls -d testrepo-* | head -n 1)
-
-    if [[ ! -d "$backupDir/node_modules" ]]; then
-      echo "✅ node_modules removed in backup"
-      return 0
-    else
-      echo "❌ ERROR: node_modules still exists in backup"
-      return 1
-    fi
-  }
-
   testBackupGitRepoMaxBackupsEnforced() {
-    echo "🧪 Should enforce maxBackups"
+    echo "🧪 testBackupGitRepoMaxBackupsEnforced"
     local tempDir
     tempDir=$(mktemp -d)
     cd "$tempDir"
@@ -108,7 +76,6 @@ testBackupGitRepo() {
 
   local test_functions=(
     "testBackupGitRepoCreatesBackupDirectory"
-    "testBackupGitRepoRemovesNodeModules"
     "testBackupGitRepoMaxBackupsEnforced"
   )
 
@@ -117,7 +84,3 @@ testBackupGitRepo() {
   bashTestRunner test_functions ignored_tests
   return $?
 }
-
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-  testBackupGitRepo
-fi

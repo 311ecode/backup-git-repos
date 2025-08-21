@@ -1,42 +1,55 @@
 #!/usr/bin/env bash
-# Copyright © 2025 Imre Toth <tothimre@gmail.com> - Proprietary Software. See LICENSE file for terms.
+# Copyright © 2025 Imre Toth <tothimre@gmail.com>
+# Proprietary Software. See LICENSE file for terms.
+
 backupGitRepo() {
   local maxBackups=$1
   local oldPWD=$(pwd)
-  local theRootOfTheGitRepository=$(getTheRootOfTheGitRepository)
+  local repoRoot
+  repoRoot=$(getTheRootOfTheGitRepository)
 
-  local theDirectoryNameOfTheOldPWD=$(basename "$theRootOfTheGitRepository")
+  local repoName=$(basename "$repoRoot")
   local backupDate=$(date +%Y-%m-%d)
   local backupTime=$(date +%H-%M-%S)
 
-  # Change to the parent directory of the git repository
-  cd "$theRootOfTheGitRepository/.."
+  cd "$repoRoot/.." || return 1
 
-  local backupName="$theDirectoryNameOfTheOldPWD-$backupDate-$backupTime"
-  cp -r "$theDirectoryNameOfTheOldPWD" "$backupName"
+  local backupName="$repoName-$backupDate-$backupTime"
+  mkdir "$backupName"
 
-  # Change into the newly created backup directory
-  cd "$backupName"
+  echo "📦 Creating backup: $backupName"
 
-  local backupPath="$(pwd)"
-  echo "The path of the backup directory is $backupPath"
-  echo "Removing node_modules folders from $backupPath"
-  find . -name 'node_modules' -type d -prune -exec rm -rf {} +
+  # Get ignored files (absolute paths)
+  local ignoredList
+  ignoredList=$(git_list_ignored_files "$repoRoot")
 
-  # Return to the parent directory
-  cd ..
+  local excludeArgs=()
+  while IFS= read -r absPath; do
+    [[ -z "$absPath" ]] && continue
+    # Convert absolute → relative to repoRoot
+    local relPath="${absPath#$repoRoot/}"
+    excludeArgs+=(--exclude="$relPath")
+  done <<< "$ignoredList"
 
-  # Remove oldest backups if maxBackups is defined and exceeded
+  rsync -a --quiet "${excludeArgs[@]}" \
+    "$repoName/" "$backupName/"
+
+  local backupPath
+  backupPath="$(realpath "$backupName")"
+  echo "✅ Backup created at $backupPath"
+
+  # Enforce maxBackups limit
   if [[ -n $maxBackups && $maxBackups -gt 0 ]]; then
-    local backupCount=$(ls -d "$theDirectoryNameOfTheOldPWD"-* 2>/dev/null | wc -l)
+    local backupCount
+    backupCount=$(ls -d "$repoName"-* 2>/dev/null | wc -l)
     while [[ $backupCount -gt $maxBackups ]]; do
-      local oldestBackup=$(ls -d "$theDirectoryNameOfTheOldPWD"-* | sort | head -n 1)
+      local oldestBackup
+      oldestBackup=$(ls -d "$repoName"-* | sort | head -n 1)
       rm -rf "$oldestBackup"
-      echo "Removed oldest backup: $oldestBackup"
+      echo "🗑️ Removed oldest backup: $oldestBackup"
       backupCount=$((backupCount - 1))
     done
   fi
 
-  # Return to the original directory
-  cd "$oldPWD"
+  cd "$oldPWD" || return 1
 }
