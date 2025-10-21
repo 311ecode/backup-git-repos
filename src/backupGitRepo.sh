@@ -3,7 +3,19 @@
 # Proprietary Software. See LICENSE file for terms.
 
 backupGitRepo() {
-  local maxBackups=$1
+  local maxBackups
+  local identifier
+  
+  # Parse parameters: if first param is a number, it's maxBackups
+  if [[ $1 =~ ^[0-9]+$ ]]; then
+    maxBackups=$1
+    identifier=$2
+  else
+    # First param is not a number, treat it as identifier
+    maxBackups=""
+    identifier=$1
+  fi
+
   local oldPWD=$(pwd)
   local repoRoot
   repoRoot=$(getTheRootOfTheGitRepository)
@@ -17,7 +29,12 @@ backupGitRepo() {
 
   cd "$repoRoot/.." || return 1
 
+  # Construct backup name with optional identifier
   local backupName="$repoName-$backupDate-$backupTime"
+  if [[ -n "$identifier" ]]; then
+    backupName="$backupName-$identifier"
+  fi
+
   mkdir "$backupName"
 
   echo "📦 Creating backup: $backupName"
@@ -41,8 +58,8 @@ backupGitRepo() {
   backupPath="$(realpath "$backupName")"
   echo "✅ Backup created at $backupPath"
 
-  # Enforce maxBackups limit
-  if [[ -n $maxBackups && $maxBackups -gt 0 ]]; then
+  # Enforce maxBackups limit (only if maxBackups is a number > 0)
+  if [[ -n $maxBackups && $maxBackups =~ ^[0-9]+$ && $maxBackups -gt 0 ]]; then
     local backupCount
     backupCount=$(ls -d "$repoName"-* 2>/dev/null | wc -l)
     while [[ $backupCount -gt $maxBackups ]]; do
