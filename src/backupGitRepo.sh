@@ -20,6 +20,12 @@ backupGitRepo() {
   local repoRoot
   repoRoot=$(getTheRootOfTheGitRepository)
 
+  # --- DEBUGGING START ---
+  if [[ -n "$DEBUG" ]]; then
+    echo "DEBUG: Repository Root: $repoRoot"
+  fi
+  # --- DEBUGGING END ---
+
   local repoName
   repoName=$(basename "$repoRoot")
   local backupDate
@@ -39,18 +45,38 @@ backupGitRepo() {
 
   echo "📦 Creating backup: $backupName"
 
-  # Collect ignored files from git
-  local ignoredList
-  ignoredList=$(git -C "$repoRoot" status --porcelain --ignored \
-    2>/dev/null | grep '^!!' | cut -c4-)
-
   local excludeArgs=()
-  while IFS= read -r relPath; do
-    [[ -z "$relPath" ]] && continue
-    excludeArgs+=(--exclude="$relPath")
-  done <<< "$ignoredList"
+  # Check if KEEP_IGNORED_REPO is NOT set; if so, apply git-ignore logic
+  if [[ -z "${KEEP_IGNORED_REPO}" ]]; then
+    # Collect ignored files from git
+    local ignoredList
+    ignoredList=$(git -C "$repoRoot" status --porcelain --ignored \
+      2>/dev/null | grep '^!!' | cut -c4-)
 
-  # Copy repo → backup, skipping ignored files
+    # --- DEBUGGING START ---
+    if [[ -n "$DEBUG" ]]; then
+      echo "DEBUG: Parsed ignoredList for rsync exclusion:"
+      echo "$ignoredList"
+    fi
+    # --- DEBUGGING END ---
+
+    while IFS= read -r relPath; do
+      [[ -z "$relPath" ]] && continue
+      excludeArgs+=(--exclude="$relPath")
+    done <<< "$ignoredList"
+
+  else
+    echo "⚠️ KEEP_IGNORED_REPO is set. All files (including ignored ones) will be backed up."
+  fi
+
+  # --- DEBUGGING START ---
+  if [[ -n "$DEBUG" ]]; then
+    echo "DEBUG: Exclude arguments:"
+    printf '%s\n' "${excludeArgs[@]}"
+  fi
+  # --- DEBUGGING END ---
+
+  # Copy repo → backup, skipping ignored files (unless KEEP_IGNORED_REPO is set)
   rsync -a --quiet "${excludeArgs[@]}" \
     "$repoName/" "$backupName/"
 
