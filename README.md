@@ -14,18 +14,15 @@ repository. Designed to be simple, space-efficient, and Git-aware.
 ## 📂 Project Structure
 
 ```
-
 util/backup/backupGitRepo/
 ├── src/
 │   └── backupGitRepo.sh          # Main implementation
 ├── test/
-│   └── backupGitRepo\_test.sh     # Test suite
+│   └── backupGitRepo_test.sh     # Test suite
 └── README.md                     # This file
-
-````
+```
 
 ## 🚀 Usage
-
 
 ### Run a backup
 
@@ -73,9 +70,20 @@ myrepo-2025-08-19-09-12-00/
 
 Unlike naive copy scripts, `backupGitRepo` respects `.gitignore`:
 
-* Ignored files (like `node_modules/`, `*.log`, `dist/`) are **not
-  included** in backups.
+* Ignored files (like `node_modules/`, `*.log`, `dist/`) are **not included** in backups by default.
 * This keeps backups small and focused on meaningful project files.
+
+### Including Ignored Files
+
+To include ignored files in your backup, set the `KEEP_IGNORED_REPO` environment variable:
+
+```bash
+# Include all files, even those in .gitignore
+KEEP_IGNORED_REPO=1 backupGitRepo
+
+# Works with other parameters too
+KEEP_IGNORED_REPO=1 backupGitRepo 5 full-backup
+```
 
 ## 🧪 Tests
 
@@ -88,9 +96,11 @@ testBackupGitRepo
 Currently covered:
 
 * ✅ Backup directory creation
+* ✅ Git-ignore exclusion behavior
 * ✅ Maximum backup count enforcement
 * ✅ Identifier parameter handling
 * ✅ Flexible parameter parsing
+* ✅ KEEP_IGNORED_REPO environment variable
 
 ## 📜 License
 
