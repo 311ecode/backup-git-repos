@@ -86,6 +86,10 @@ backupGitRepo() {
   backupPath="$(realpath "$backupName")"
   echo "✅ Backup created at $backupPath"
 
+  # Set environment variable for the latest backup path
+  export LAST_BACKUP="$backupPath"
+  echo "🔗 LAST_BACKUP set to $LAST_BACKUP"
+
   # Enforce maxBackups limit (only if maxBackups is a number > 0)
   if [[ -n $maxBackups && $maxBackups =~ ^[0-9]+$ && $maxBackups -gt 0 ]]; then
     local backupCount
