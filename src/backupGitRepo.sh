@@ -3,6 +3,8 @@
 # Proprietary Software. See LICENSE file for terms.
 
 backupGitRepo() {
+  command -v markdown-show-help-registration &>/dev/null && eval "$(markdown-show-help-registration)"
+
   local maxBackups
   local identifier
   
